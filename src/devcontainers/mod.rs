@@ -1,5 +1,6 @@
 pub mod config;
 
+use std::io::ErrorKind;
 use crate::provider::docker::Docker;
 use crate::provider::docker_compose::DockerCompose;
 use crate::provider::podman::Podman;
@@ -17,16 +18,26 @@ pub struct Devcontainer {
 }
 
 impl Devcontainer {
-    pub fn load(directory: PathBuf) -> Self {
+    pub fn load(directory: PathBuf) -> Result<Self, std::io::Error> {
         let file = directory.join(".devcontainer").join("devcontainer.json");
-        let config = Config::parse(&file).expect("could not find devcontainer.json");
-        let settings = Settings::load();
-        let provider = build_provider(&directory, &settings, &config);
+        let file = if file.is_file() {
+            file
+        } else {
+            directory.join(".devcontainer.json")
+        };
 
-        Self {
-            config: config.clone(),
-            provider,
-            settings,
+        if file.exists() {
+            let config = Config::parse(&file).expect(format!("could not parse {}", file.as_path().display()).as_str());
+            let settings = Settings::load();
+            let provider = build_provider(&directory, &settings, &config);
+
+            Ok(Self {
+                config: config.clone(),
+                provider,
+                settings,
+            })
+        } else {
+            Err(std::io::Error::new(ErrorKind::NotFound, "Could not find .devcontainer/devcontainer.json or .devcontainer.json"))
         }
     }
 
@@ -180,7 +191,7 @@ fn build_provider(directory: &Path, settings: &Settings, config: &Config) -> Box
                 })
             } else {
                 let dockerfile = directory
-                    .join(".devcontainer")
+                    // .join(".devcontainer")
                     .join(config.dockerfile().unwrap());
 
                 Box::new(Docker {
@@ -190,7 +201,9 @@ fn build_provider(directory: &Path, settings: &Settings, config: &Config) -> Box
                     file: dockerfile.to_str().unwrap().to_string(),
                     forward_ports: config.forward_ports.clone(),
                     name: config.safe_name(),
+                    override_command: config.override_command,
                     run_args: config.run_args.clone(),
+                    mounts: config.mounts.clone(),
                     user: config.remote_user.clone(),
                     workspace_folder: config.workspace_folder.clone(),
                 })

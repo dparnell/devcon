@@ -15,8 +15,10 @@ pub struct Docker {
     pub forward_ports: Vec<u16>,
     pub name: String,
     pub run_args: Vec<String>,
+    pub mounts: Option<Vec<HashMap<String, String>>>,
     pub user: String,
     pub workspace_folder: String,
+    pub override_command: bool,
 }
 
 impl Provider for Docker {
@@ -77,6 +79,14 @@ impl Provider for Docker {
             command.arg(arg);
         }
 
+        if let Some(mounts) = &self.mounts {
+            for mount in mounts {
+                command.arg("--mount");
+                
+                let m = mount.iter().map(|(k,v)| format!("{}={}", k, v)).collect::<Vec<String>>().join(",");
+                command.arg(m);
+            }
+        }
         command.arg("-it");
         command.arg("--name");
         command.arg(&self.name);
@@ -85,8 +95,11 @@ impl Provider for Docker {
         command.arg("-w");
         command.arg(&self.workspace_folder);
         command.arg(tag);
-        command.arg("zsh");
-
+        
+        if self.override_command {
+            command.arg("/bin/sh").arg("-c").arg("while sleep 1000; do :; done");    
+        }
+        
         print_command(&command);
 
         Ok(command.status()?.success())

@@ -19,6 +19,7 @@ impl Default for ShutdownAction {
 #[serde(rename_all = "camelCase")]
 pub struct Config {
     name: String,
+    pub file: Option<String>,
     pub build: Option<Build>,
     #[serde(default)]
     pub forward_ports: Vec<u16>,
@@ -29,6 +30,9 @@ pub struct Config {
     pub remote_user: String,
     #[serde(default)]
     pub run_args: Vec<String>,
+    #[serde(default)]
+    pub override_command: bool,
+    pub mounts: Option<Vec<HashMap<String, String>>>,
     #[serde(default)]
     pub remote_env: HashMap<String, String>,
     pub docker_compose_file: Option<String>,
@@ -43,6 +47,8 @@ pub struct Config {
 #[serde(rename_all = "camelCase")]
 pub struct Build {
     pub dockerfile: Option<String>,
+    pub context: Option<String>,
+
     #[serde(default)]
     pub args: HashMap<String, String>,
 }

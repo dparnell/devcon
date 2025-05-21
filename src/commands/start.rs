@@ -5,7 +5,7 @@ use crate::devcontainers::Devcontainer;
 
 pub fn run(dir: &Option<String>) -> std::io::Result<()> {
     let directory = get_project_directory(dir)?;
-    let devcontainer = Devcontainer::load(directory);
+    let devcontainer = Devcontainer::load(directory)?;
     devcontainer.run(true)?;
 
     Ok(())
